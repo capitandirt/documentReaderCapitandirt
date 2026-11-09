@@ -5,7 +5,7 @@ import mammoth from 'mammoth';
 import jszip from 'jszip';
 import { XMLParser } from 'fast-xml-parser';
 
-function ReplaceFlags(s: string){
+function ReplaceFlags(s: string){ // replace an imposisble symbols of < and > to their html versions
 	return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
@@ -14,7 +14,7 @@ const MIME: Record<string, string> = {
   gif: 'image/gif', svg: 'image/svg+xml', webp: 'image/webp', bmp: 'image/bmp',
 };
 
-async function LoadImages(zip: jszip): Promise<Map<string, string>> {
+async function LoadImages(zip: jszip): Promise<Map<string, string>> { // get pictures from a zip
   const map = new Map<string, string>();
   for (const [path, file] of Object.entries(zip.files)) {
     if (file.dir) {
@@ -29,7 +29,7 @@ async function LoadImages(zip: jszip): Promise<Map<string, string>> {
   return map;
 }
 
-function RenderNodes(nodes: any[], images: Map<string, string>): string {
+function RenderNodes(nodes: any[], images: Map<string, string>): string { //converts a file body to html page 
   return nodes.map(n => {
     if ('#text' in n) {
       return ReplaceFlags(String(n['#text']));
@@ -69,7 +69,7 @@ function RenderNodes(nodes: any[], images: Map<string, string>): string {
   }).join('');
 }
 
-function FindNode(nodes: any[], name: string): any[] | undefined {
+function FindNode(nodes: any[], name: string): any[] | undefined { // DFS in XML-tree for a node with a name tag
   for (const n of nodes) {
     const tag = Object.keys(n).find(k => k !== ':@');
     if (!tag) {
@@ -86,13 +86,13 @@ function FindNode(nodes: any[], name: string): any[] | undefined {
 }
 
 async function OdtToHTML(data: Uint8Array): Promise<string>{
-	const zip = await jszip.loadAsync(data);
-	const xml = await zip.file('content.xml')!.async('string');
+	const zip = await jszip.loadAsync(data); // unpack an odt file
+	const xml = await zip.file('content.xml')!.async('string'); // find a main document body in zip archive
 
 	const parsed = new XMLParser({
 		preserveOrder: true,
 		trimValues: false,
-		ignoreAttributes: false, // нужно, чтобы читать xlink:href и svg:width
+		ignoreAttributes: false, // needed to read xlink:href и svg:width
 	}).parse(xml);
 	const images = await LoadImages(zip);
 	const body = FindNode(parsed, 'office:text') ?? parsed;
@@ -123,7 +123,7 @@ class DocProvider implements vscode.CustomReadonlyEditorProvider {
       const data = await vscode.workspace.fs.readFile(document.uri);
       const html = document.uri.path.toLowerCase().endsWith('.odt')
       ? await OdtToHTML(data)
-      : (await mammoth.convertToHtml({ buffer: Buffer.from(data) })).value;
+      : (await mammoth.convertToHtml({ buffer: Buffer.from(data) })).value; // for docx document i use mammoth instead of a custom docx-to-html function
       webviewPanel.webview.html = Wrap(html);
 		} 
     catch (e) {
